@@ -180,6 +180,17 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   carregarPerfil();
 });
 
+
+
+
+
+
+
+
+
+
+
+
 // EVENTOS DE INTERFACE
 document.getElementById('search-input').addEventListener('input', renderProducts);
 document.querySelectorAll('.pill').forEach(btn => {
@@ -220,26 +231,78 @@ document.getElementById('open-checkout-btn').onclick = () => {
     return;
   }
   if (deck.length === 0) return;
+
   const total = deck.reduce((acc, i) => acc + i.cr, 0);
   document.getElementById('checkout-saldo').textContent = currentUser.credits;
   document.getElementById('checkout-items-text').textContent = `${deck.length} itens digitais · Entrega imediata`;
   document.getElementById('checkout-total').textContent = `${total} CR`;
+  document.getElementById('checkout-msg').textContent = '';
+
   document.getElementById('deck-drawer').classList.add('hidden');
   document.getElementById('checkout-modal').classList.remove('hidden');
 };
 
 document.getElementById('close-checkout-btn').onclick = () => document.getElementById('checkout-modal').classList.add('hidden');
 
-document.getElementById('confirm-purchase-btn').onclick = () => {
-  const total = deck.reduce((acc, i) => acc + i.cr, 0);
+// CHECKOUT REAL CONECTADO AO BACK-END (POST /orders/checkout)
+document.getElementById('confirm-purchase-btn').onclick = async () => {
+  const token = localStorage.getItem('pixelvault_token');
   const msg = document.getElementById('checkout-msg');
-  if (currentUser.credits < total) {
+  const btn = document.getElementById('confirm-purchase-btn');
+
+  if (!token) {
     msg.style.color = '#ef4444';
-    msg.textContent = 'Créditos insuficientes para concluir.';
+    msg.textContent = 'Faça login antes de finalizar a compra.';
     return;
   }
-  msg.style.color = '#00ff88';
-  msg.textContent = 'Pronto! No próximo passo vamos descontar esses créditos direto no MySQL.';
+
+  if (deck.length === 0) return;
+
+  const total = deck.reduce((acc, i) => acc + i.cr, 0);
+  if (currentUser && currentUser.credits < total) {
+    msg.style.color = '#ef4444';
+    msg.textContent = `Créditos insuficientes (${currentUser.credits} CR disponíveis).`;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'PROCESSANDO...';
+
+  try {
+    const productIds = deck.map(item => item.id);
+    const res = await fetch(`${API_URL}/orders/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ productIds }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      msg.style.color = '#ef4444';
+      msg.textContent = data.error || 'Erro ao finalizar compra.';
+      return;
+    }
+
+    msg.style.color = '#00ff88';
+    msg.textContent = `Compra #${data.orderId} confirmada! Novo saldo: ${data.newBalance} CR`;
+    deck = [];
+    await carregarPerfil();
+
+    setTimeout(() => {
+      msg.textContent = '';
+      document.getElementById('checkout-modal').classList.add('hidden');
+    }, 1500);
+  } catch (err) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Erro de conexão com o servidor (porta 3000).';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔒 CONFIRMAR COMPRA';
+  }
 };
 
 renderProducts();

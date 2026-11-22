@@ -1,9 +1,16 @@
 import { pool } from '../database/connection';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
+interface ProductRow extends RowDataPacket {
+  id: number;
+  title: string;
+  cr: number;
+  seller_id: number | null;
+}
+
 export class OrderService {
   async checkout(userId: number, productIds: number[]) {
-    if (!productIds || productIds.length === 0) {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
       throw new Error('O deck está vazio.');
     }
 
@@ -12,51 +19,80 @@ export class OrderService {
     try {
       await conn.beginTransaction();
 
-      // 1. Busca o saldo atual do usuário travando a linha para evitar compra dupla simultânea
+      // 1. Trava a linha do comprador para evitar gasto duplo simultâneo
       const [userRows] = await conn.query<RowDataPacket[]>(
         'SELECT id, credits FROM users WHERE id = ? FOR UPDATE',
         [userId]
       );
-      const user = userRows[0];
-      if (!user) throw new Error('Usuário não encontrado.');
+      const buyer = userRows[0];
+      if (!buyer) {
+        throw new Error('Usuário não encontrado.');
+      }
 
-      // 2. Busca os preços reais dos produtos no banco (ignora preços manipulados no front)
+      // 2. Busca todos os produtos do Deck em uma única consulta no banco
+      const uniqueIds = [...new Set(productIds)];
+      const [prodRows] = await conn.query<ProductRow[]>(
+        'SELECT id, title, cr, seller_id FROM products WHERE id IN (?)',
+        [uniqueIds]
+      );
+
+      const productMap = new Map<number, ProductRow>();
+      for (const p of prodRows) {
+        productMap.set(p.id, p);
+      }
+
+      // 3. Calcula o total real e valida cada item enviado
       let totalCr = 0;
-      const itemsToSave: { productId: number; priceCr: number }[] = [];
+      const itemsToSave: { productId: number; priceCr: number; sellerId: number | null }[] = [];
 
       for (const prodId of productIds) {
-        const [prodRows] = await conn.query<RowDataPacket[]>(
-          'SELECT id, cr FROM products WHERE id = ?',
-          [prodId]
-        );
-        const product = prodRows[0];
-        if (!product) throw new Error(`Produto ID ${prodId} não encontrado.`);
+        const product = productMap.get(prodId);
+        if (!product) {
+          throw new Error(`Produto ID ${prodId} não encontrado.`);
+        }
+        if (product.seller_id === userId) {
+          throw new Error(`Você não pode comprar o seu próprio anúncio (${product.title}).`);
+        }
 
         totalCr += product.cr;
-        itemsToSave.push({ productId: product.id, priceCr: product.cr });
+        itemsToSave.push({
+          productId: product.id,
+          priceCr: product.cr,
+          sellerId: product.seller_id,
+        });
       }
 
-      // 3. Verifica se tem saldo suficiente
-      if (user.credits < totalCr) {
-        throw new Error(`Créditos insuficientes. Necessário: ${totalCr} CR, Disponível: ${user.credits} CR.`);
+      // 4. Verifica se o comprador tem saldo suficiente
+      if (buyer.credits < totalCr) {
+        throw new Error(
+          `Créditos insuficientes. Necessário: ${totalCr} CR, Disponível: ${buyer.credits} CR.`
+        );
       }
 
-      // 4. Desconta os créditos do usuário
-      const newBalance = user.credits - totalCr;
+      // 5. Desconta os créditos do comprador
+      const newBalance = buyer.credits - totalCr;
       await conn.query('UPDATE users SET credits = ? WHERE id = ?', [newBalance, userId]);
 
-      // 5. Registra o pedido e os itens comprados
+      // 6. Registra o pedido na tabela orders
       const [orderResult] = await conn.query<ResultSetHeader>(
         'INSERT INTO orders (user_id, total_cr) VALUES (?, ?)',
         [userId, totalCr]
       );
       const orderId = orderResult.insertId;
 
+      // 7. Registra cada item comprado e repassa os créditos ao vendedor (se houver seller_id)
       for (const item of itemsToSave) {
         await conn.query(
           'INSERT INTO order_items (order_id, product_id, price_cr) VALUES (?, ?, ?)',
           [orderId, item.productId, item.priceCr]
         );
+
+        if (item.sellerId) {
+          await conn.query(
+            'UPDATE users SET credits = credits + ? WHERE id = ?',
+            [item.priceCr, item.sellerId]
+          );
+        }
       }
 
       await conn.commit();
