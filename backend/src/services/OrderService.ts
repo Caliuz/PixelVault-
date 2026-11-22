@@ -6,7 +6,11 @@ interface ProductRow extends RowDataPacket {
   title: string;
   cr: number;
   seller_id: number | null;
+  category: string;
 }
+
+// Itens digitais únicos: só podem ser comprados uma vez por usuário
+const DIGITAL_UNICOS = ['Jogo', 'Passe'];
 
 export class OrderService {
   async checkout(userId: number, productIds: number[]) {
@@ -32,7 +36,7 @@ export class OrderService {
       // 2. Busca todos os produtos do deck em uma única consulta
       const uniqueIds = [...new Set(productIds)];
       const [prodRows] = await conn.query<ProductRow[]>(
-        'SELECT id, title, cr, seller_id FROM products WHERE id IN (?)',
+        'SELECT id, title, cr, seller_id, category FROM products WHERE id IN (?)',
         [uniqueIds]
       );
 
@@ -40,6 +44,26 @@ export class OrderService {
       for (const p of prodRows) {
         productMap.set(p.id, p);
       }
+
+      // 2.1 Descobre quais itens digitais únicos o comprador já possui
+      const digitalIds = prodRows
+        .filter((p) => DIGITAL_UNICOS.includes(p.category))
+        .map((p) => p.id);
+
+      const jaPossui = new Set<number>();
+      if (digitalIds.length > 0) {
+        const [ownedRows] = await conn.query<RowDataPacket[]>(
+          `SELECT DISTINCT oi.product_id
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+            WHERE o.user_id = ? AND oi.product_id IN (?)`,
+          [userId, digitalIds]
+        );
+        for (const r of ownedRows) {
+          jaPossui.add(r.product_id);
+        }
+      }
+      const digitaisNoDeck = new Set<number>();
 
       // 3. Calcula o total real e valida cada item
       let totalCr = 0;
@@ -52,6 +76,16 @@ export class OrderService {
         }
         if (product.seller_id === userId) {
           throw new Error(`Você não pode comprar o seu próprio anúncio (${product.title}).`);
+        }
+
+        if (DIGITAL_UNICOS.includes(product.category)) {
+          if (jaPossui.has(product.id)) {
+            throw new Error(`Você já possui "${product.title}".`);
+          }
+          if (digitaisNoDeck.has(product.id)) {
+            throw new Error(`"${product.title}" aparece mais de uma vez no deck.`);
+          }
+          digitaisNoDeck.add(product.id);
         }
 
         totalCr += product.cr;

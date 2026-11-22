@@ -1,0 +1,70 @@
+[1mdiff --git a/backend/src/services/OrderService.ts b/backend/src/services/OrderService.ts[m
+[1mindex efd0ff5..6cfbb76 100644[m
+[1m--- a/backend/src/services/OrderService.ts[m
+[1m+++ b/backend/src/services/OrderService.ts[m
+[36m@@ -6,8 +6,12 @@[m [minterface ProductRow extends RowDataPacket {[m
+   title: string;[m
+   cr: number;[m
+   seller_id: number | null;[m
+[32m+[m[32m  category: string;[m
+ }[m
+ [m
+[32m+[m[32m// Itens digitais únicos: só podem ser comprados uma vez por usuário[m
+[32m+[m[32mconst DIGITAL_UNICOS = ['Jogo', 'Passe'];[m
+[32m+[m
+ export class OrderService {[m
+   async checkout(userId: number, productIds: number[]) {[m
+     if (!Array.isArray(productIds) || productIds.length === 0) {[m
+[36m@@ -32,7 +36,7 @@[m [mexport class OrderService {[m
+       // 2. Busca todos os produtos do deck em uma única consulta[m
+       const uniqueIds = [...new Set(productIds)];[m
+       const [prodRows] = await conn.query<ProductRow[]>([m
+[31m-        'SELECT id, title, cr, seller_id FROM products WHERE id IN (?)',[m
+[32m+[m[32m        'SELECT id, title, cr, seller_id, category FROM products WHERE id IN (?)',[m
+         [uniqueIds][m
+       );[m
+ [m
+[36m@@ -41,6 +45,26 @@[m [mexport class OrderService {[m
+         productMap.set(p.id, p);[m
+       }[m
+ [m
+[32m+[m[32m      // 2.1 Descobre quais itens digitais únicos o comprador já possui[m
+[32m+[m[32m      const digitalIds = prodRows[m
+[32m+[m[32m        .filter((p) => DIGITAL_UNICOS.includes(p.category))[m
+[32m+[m[32m        .map((p) => p.id);[m
+[32m+[m
+[32m+[m[32m      const jaPossui = new Set<number>();[m
+[32m+[m[32m      if (digitalIds.length > 0) {[m
+[32m+[m[32m        const [ownedRows] = await conn.query<RowDataPacket[]>([m
+[32m+[m[32m          `SELECT DISTINCT oi.product_id[m
+[32m+[m[32m             FROM order_items oi[m
+[32m+[m[32m             JOIN orders o ON o.id = oi.order_id[m
+[32m+[m[32m            WHERE o.user_id = ? AND oi.product_id IN (?)`,[m
+[32m+[m[32m          [userId, digitalIds][m
+[32m+[m[32m        );[m
+[32m+[m[32m        for (const r of ownedRows) {[m
+[32m+[m[32m          jaPossui.add(r.product_id);[m
+[32m+[m[32m        }[m
+[32m+[m[32m      }[m
+[32m+[m[32m      const digitaisNoDeck = new Set<number>();[m
+[32m+[m
+       // 3. Calcula o total real e valida cada item[m
+       let totalCr = 0;[m
+       const itemsToSave: { productId: number; title: string; priceCr: number; sellerId: number | null }[] = [];[m
+[36m@@ -54,6 +78,16 @@[m [mexport class OrderService {[m
+           throw new Error(`Você não pode comprar o seu próprio anúncio (${product.title}).`);[m
+         }[m
+ [m
+[32m+[m[32m        if (DIGITAL_UNICOS.includes(product.category)) {[m
+[32m+[m[32m          if (jaPossui.has(product.id)) {[m
+[32m+[m[32m            throw new Error(`Você já possui "${product.title}".`);[m
+[32m+[m[32m          }[m
+[32m+[m[32m          if (digitaisNoDeck.has(product.id)) {[m
+[32m+[m[32m            throw new Error(`"${product.title}" aparece mais de uma vez no deck.`);[m
+[32m+[m[32m          }[m
+[32m+[m[32m          digitaisNoDeck.add(product.id);[m
+[32m+[m[32m        }[m
+[32m+[m
+         totalCr += product.cr;[m
+         itemsToSave.push({[m
+           productId: product.id,[m
