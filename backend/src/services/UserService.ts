@@ -26,6 +26,11 @@ export class UserService {
       [username, email, hashedPassword]
     );
 
+    await pool.query(
+      "INSERT INTO credit_transactions (user_id, type, amount, balance_after, description) SELECT id, 'signup_bonus', credits, credits, 'Bônus de boas-vindas' FROM users WHERE id = ?",
+      [result.insertId]
+    );
+
     return {
       id: result.insertId,
       username,

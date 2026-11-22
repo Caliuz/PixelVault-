@@ -3,6 +3,7 @@ import cors from 'cors';
 import { userRoutes } from './routes/userRoutes';
 import { authRoutes } from './routes/authRoutes';
 import { orderRoutes } from './routes/orderRoutes';
+import { walletRoutes } from './routes/walletRoutes';
 
 const app = express();
 
@@ -16,5 +17,6 @@ app.get('/', (req, res) => {
 app.use(userRoutes);
 app.use(authRoutes);
 app.use(orderRoutes);
+app.use(walletRoutes);
 
 export { app };

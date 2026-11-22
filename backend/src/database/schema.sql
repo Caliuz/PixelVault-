@@ -49,3 +49,16 @@ INSERT IGNORE INTO products (id, title, category, platform, tag, cr, brl, rating
 (4, 'Neural Link Headset', 'Hardware', 'ÁUDIO 7.1', 'HARDWARE', 890, 549.90, '4.9', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=700&q=80'),
 (5, 'NeuroDeck Portátil', 'Hardware', 'CONSOLE', 'ED. LIMITADA', 2400, 1499.00, '5.0', 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?auto=format&fit=crop&w=700&q=80'),
 (6, 'Orbital Siege — Passe S7', 'Passe', 'PC / CLOUD', 'PASSE DE BATALHA', 120, 69.90, '4.6', 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&w=700&q=80');
+
+CREATE TABLE IF NOT EXISTS credit_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  type ENUM('signup_bonus', 'purchase', 'sale') NOT NULL,
+  amount INT NOT NULL,
+  balance_after INT NOT NULL,
+  order_id INT NULL,
+  description VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+);

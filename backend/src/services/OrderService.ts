@@ -29,7 +29,7 @@ export class OrderService {
         throw new Error('Usuário não encontrado.');
       }
 
-      // 2. Busca todos os produtos do Deck em uma única consulta no banco
+      // 2. Busca todos os produtos do deck em uma única consulta
       const uniqueIds = [...new Set(productIds)];
       const [prodRows] = await conn.query<ProductRow[]>(
         'SELECT id, title, cr, seller_id FROM products WHERE id IN (?)',
@@ -41,9 +41,9 @@ export class OrderService {
         productMap.set(p.id, p);
       }
 
-      // 3. Calcula o total real e valida cada item enviado
+      // 3. Calcula o total real e valida cada item
       let totalCr = 0;
-      const itemsToSave: { productId: number; priceCr: number; sellerId: number | null }[] = [];
+      const itemsToSave: { productId: number; title: string; priceCr: number; sellerId: number | null }[] = [];
 
       for (const prodId of productIds) {
         const product = productMap.get(prodId);
@@ -57,6 +57,7 @@ export class OrderService {
         totalCr += product.cr;
         itemsToSave.push({
           productId: product.id,
+          title: product.title,
           priceCr: product.cr,
           sellerId: product.seller_id,
         });
@@ -73,14 +74,21 @@ export class OrderService {
       const newBalance = buyer.credits - totalCr;
       await conn.query('UPDATE users SET credits = ? WHERE id = ?', [newBalance, userId]);
 
-      // 6. Registra o pedido na tabela orders
+      // 6. Registra o pedido
       const [orderResult] = await conn.query<ResultSetHeader>(
         'INSERT INTO orders (user_id, total_cr) VALUES (?, ?)',
         [userId, totalCr]
       );
       const orderId = orderResult.insertId;
 
-      // 7. Registra cada item comprado e repassa os créditos ao vendedor (se houver seller_id)
+      // 7. Registra a saída no histórico do comprador
+      const titles = itemsToSave.map((i) => i.title).join(', ');
+      await conn.query(
+        'INSERT INTO credit_transactions (user_id, type, amount, balance_after, order_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+        [userId, 'purchase', -totalCr, newBalance, orderId, `Compra #${orderId}: ${titles}`.slice(0, 255)]
+      );
+
+      // 8. Registra cada item e repassa os créditos ao vendedor (se houver seller_id)
       for (const item of itemsToSave) {
         await conn.query(
           'INSERT INTO order_items (order_id, product_id, price_cr) VALUES (?, ?, ?)',
@@ -91,6 +99,23 @@ export class OrderService {
           await conn.query(
             'UPDATE users SET credits = credits + ? WHERE id = ?',
             [item.priceCr, item.sellerId]
+          );
+
+          const [sellerRows] = await conn.query<RowDataPacket[]>(
+            'SELECT credits FROM users WHERE id = ?',
+            [item.sellerId]
+          );
+
+          await conn.query(
+            'INSERT INTO credit_transactions (user_id, type, amount, balance_after, order_id, description) VALUES (?, ?, ?, ?, ?, ?)',
+            [
+              item.sellerId,
+              'sale',
+              item.priceCr,
+              sellerRows[0].credits,
+              orderId,
+              `Venda: ${item.title} (pedido #${orderId})`.slice(0, 255),
+            ]
           );
         }
       }
