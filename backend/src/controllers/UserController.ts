@@ -6,13 +6,17 @@ const userService = new UserService();
 export class UserController {
   async create(req: Request, res: Response) {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, role } = req.body;
 
       if (!username || !email || !password) {
         return res.status(400).json({ error: 'Username, e-mail e senha são obrigatórios.' });
       }
 
-      const user = await userService.create({ username, email, password });
+      if (role !== undefined && role !== 'client' && role !== 'seller') {
+        return res.status(400).json({ error: "Role inválido. Use 'client' ou 'seller'." });
+      }
+
+      const user = await userService.create({ username, email, password, role: role ?? 'client' });
       return res.status(201).json(user);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

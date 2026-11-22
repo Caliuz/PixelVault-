@@ -200,6 +200,7 @@
           <input type="text" id="reg-username" placeholder="Username (ex: Cauan_Runner)" required />
           <input type="email" id="reg-email" placeholder="E-mail" required />
           <input type="password" id="reg-password" placeholder="Senha" required />
+          <label class="check"><input type="checkbox" id="reg-seller" /> Quero vender (criar conta de vendedor)</label>
           <button type="submit" class="btn-cyan-lg full">CRIAR CONTA (+1500 CR)</button>
         </form>
       </div>
@@ -211,6 +212,34 @@
           <p><strong>E-mail:</strong> <span id="prof-email"></span></p>
           <p><strong>Saldo:</strong> <span id="prof-credits" class="green"></span> CR</p>
         </div>
+        <div class="summary-box">
+          <p><strong>Tipo de conta:</strong> <span id="prof-role" class="accent"></span></p>
+          <button id="become-seller-btn" class="btn-cyan-lg full hidden">QUERO SER VENDEDOR</button>
+        </div>
+
+        <div id="seller-panel" class="summary-box hidden">
+          <small class="accent">// PAINEL DO VENDEDOR</small>
+          <form id="product-form" class="form">
+            <input type="text" id="prod-title" placeholder="Título do produto" maxlength="100" required />
+            <select id="prod-category" required>
+              <option value="Jogo">Jogo</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Passe">Passe</option>
+            </select>
+            <input type="text" id="prod-platform" placeholder="Plataforma (ex: PC / CLOUD)" maxlength="50" required />
+            <input type="number" id="prod-cr" placeholder="Preço em CR" min="1" max="100000" step="1" required />
+            <input type="url" id="prod-img" placeholder="URL da imagem (https://...)" required />
+            <button type="submit" class="btn-cyan-lg full">PUBLICAR ANÚNCIO</button>
+          </form>
+          <small class="muted">MEUS ANÚNCIOS</small>
+          <div id="my-products"></div>
+        </div>
+
+        <div class="summary-box">
+          <small class="accent">// HISTÓRICO DE SALDO</small>
+          <div id="wallet-history"><p class="muted">Carregando...</p></div>
+        </div>
+
         <button id="logout-btn" class="btn-danger full">SAIR DA CONTA</button>
       </div>
     </div>

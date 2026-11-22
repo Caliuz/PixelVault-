@@ -6,10 +6,11 @@ interface CreateUserDTO {
   username: string;
   email: string;
   password: string;
+  role?: 'client' | 'seller';
 }
 
 export class UserService {
-  async create({ username, email, password }: CreateUserDTO) {
+  async create({ username, email, password, role = 'client' }: CreateUserDTO) {
     const [existing] = await pool.query<RowDataPacket[]>(
       'SELECT id FROM users WHERE email = ? OR username = ?',
       [email, username]
@@ -22,8 +23,8 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword]
+      'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+      [username, email, hashedPassword, role]
     );
 
     await pool.query(
@@ -35,23 +36,33 @@ export class UserService {
       id: result.insertId,
       username,
       email,
+      role,
       credits: 1500,
     };
   }
 
   async findAll() {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, email, credits, created_at FROM users'
+      'SELECT id, username, email, role, credits, created_at FROM users'
     );
     return rows;
   }
 
   async findById(id: number) {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, email, credits, created_at FROM users WHERE id = ?',
+      'SELECT id, username, email, role, credits, created_at FROM users WHERE id = ?',
       [id]
     );
     if (rows.length === 0) throw new Error('Usuário não encontrado.');
     return rows[0];
+  }
+
+  async becomeSeller(userId: number) {
+    const [result] = await pool.query<ResultSetHeader>(
+      "UPDATE users SET role = 'seller' WHERE id = ?",
+      [userId]
+    );
+    if (result.affectedRows === 0) throw new Error('Usuário não encontrado.');
+    return { id: userId, role: 'seller' };
   }
 }
