@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIXEL//VAULT — O Cofre dos Jogadores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <span class="logo-icon">◈</span>
+        <span>PIXEL<span class="accent">//</span>VAULT</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#destaques" class="active">Destaques</a>
+        <a href="#catalogo">Títulos AAA</a>
+        <a href="#catalogo" data-filter="Hardware">Hardware</a>
+        <a href="#catalogo" data-filter="Passe">Passes</a>
+      </nav>
+
+      <div class="nav-actions">
+        <!-- Exibido quando deslogado -->
+        <button id="open-auth-btn" class="btn-outline">ENTRAR / CONTA</button>
+
+        <!-- Exibido quando logado (dados reais do MySQL) -->
+        <div id="user-hud" class="user-hud hidden">
+          <div class="credits-pill">
+            <span class="dot"></span>
+            <span id="nav-credits">0</span> CREDITS
+          </div>
+          <button id="open-profile-btn" class="icon-btn" title="Meu Perfil">👤</button>
+        </div>
+
+        <button id="open-deck-btn" class="btn-cyan">
+          🛒 DECK <span id="deck-count" class="badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO BANNER -->
+  <section id="destaques" class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow">// ACESSO DIGITAL IMEDIATO</span>
+        <h1>ENTRE NO<br><span class="accent">COFRE DOS</span><br>JOGADORES</h1>
+        <p>Títulos AAA, hardware de ponta, perifericos e passes de batalha — tudo desbloqueado em um só lugar.</p>
+        <div class="hero-cta">
+          <a href="#catalogo" class="btn-cyan-lg">EXPLORAR CATÁLOGO →</a>
+          <button id="hero-deck-btn" class="btn-dark-lg">VER MEU DECK</button>
+        </div>
+        <div class="hero-stats">
+          <span><strong class="green">●</strong> Entrega instantânea</span>
+          <span><strong class="accent">◈</strong> Pagamento via Créditos VAULT</span>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <span class="tag-pill green-tag">EM DESTAQUE</span>
+        <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80" alt="CyberPulse 2099">
+        <div class="hero-card-info">
+          <small>PC / CLOUD · JOGO DIGITAL</small>
+          <h3>CyberPulse 2099</h3>
+          <div class="hero-card-bottom">
+            <span class="price-cr">420 CR</span>
+            <span class="rating">★ 4.9</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUSCA E FILTROS -->
+  <section id="catalogo" class="catalog-section">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="🔍 Buscar por título ou plataforma..." />
+      <div class="filter-pills">
+        <button class="pill active" data-cat="Todos">Todos</button>
+        <button class="pill" data-cat="Jogo">Jogos</button>
+        <button class="pill" data-cat="Hardware">Hardware</button>
+        <button class="pill" data-cat="Passe">Passes</button>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2><span class="accent">▣</span> TÍTULOS AAA & EQUIPAMENTOS</h2>
+      <span id="items-count" class="muted">6 itens disponíveis</span>
+    </div>
+
+    <div id="products-grid" class="products-grid"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <strong>PIXEL<span class="accent">//</span>VAULT</strong>
+        <p class="muted">Plataforma digital de jogos e hardware.</p>
+      </div>
+      <div class="green">● API Conectada · MySQL + TypeScript</div>
+    </div>
+  </footer>
+
+  <!-- DRAWER LATERAL: SEU DECK (CARRINHO) -->
+  <aside id="deck-drawer" class="drawer hidden">
+    <div class="drawer-backdrop" id="close-deck-backdrop"></div>
+    <div class="drawer-panel">
+      <div class="drawer-header">
+        <div>
+          <small class="accent">// INVENTÁRIO PESSOAL</small>
+          <h2>SEU DECK</h2>
+        </div>
+        <button id="close-deck-btn" class="icon-btn">✕</button>
+      </div>
+
+      <div class="saldo-box">
+        <small>SALDO DISPONÍVEL</small>
+        <div class="green-saldo"><span class="dot"></span> <span id="deck-saldo">0</span> CREDITS</div>
+      </div>
+
+      <div id="deck-items" class="deck-items"></div>
+
+      <div class="deck-footer">
+        <div class="row"><span>Subtotal</span><strong id="deck-subtotal">0 CR</strong></div>
+        <div class="row muted"><span>ou pague em reais</span><span id="deck-brl">R$ 0,00</span></div>
+        <div class="row"><span>Saldo após a compra</span><span id="deck-after" class="green">0 CR</span></div>
+        <button id="open-checkout-btn" class="btn-cyan-lg full">FINALIZAR COMPRA →</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MODAL: CHECKOUT (CONFIRME SEU ACESSO) -->
+  <div id="checkout-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="drawer-header">
+        <div>
+          <small class="accent">// CHECKOUT SEGURO</small>
+          <h2>CONFIRME SEU ACESSO</h2>
+        </div>
+        <button id="close-checkout-btn" class="icon-btn">✕</button>
+      </div>
+
+      <div class="steps">
+        <span class="green">01 DECK</span> ─── <span class="accent">02 PAGAMENTO</span> ─── <span class="muted">03 JOGAR</span>
+      </div>
+
+      <div class="pay-option selected">
+        <div>
+          <strong>☑ Créditos VAULT</strong>
+          <div class="green small">Disponível: <span id="checkout-saldo">0</span> CR</div>
+        </div>
+        <span class="accent small">SELECIONADO</span>
+      </div>
+
+      <div class="summary-box">
+        <small class="muted">RESUMO DO PEDIDO</small>
+        <p id="checkout-items-text">0 itens digitais · Entrega imediata</p>
+        <div class="row"><span>TOTAL</span><strong class="accent big" id="checkout-total">0 CR</strong></div>
+      </div>
+
+      <p id="checkout-msg" class="status-msg"></p>
+      <button id="confirm-purchase-btn" class="btn-cyan-lg full">🔒 CONFIRMAR COMPRA</button>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN / CADASTRO / PERFIL -->
+  <div id="auth-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="drawer-header">
+        <div>
+          <small class="accent">// AUTENTICAÇÃO JWT</small>
+          <h2 id="auth-modal-title">ACESSAR CONTA</h2>
+        </div>
+        <button id="close-auth-btn" class="icon-btn">✕</button>
+      </div>
+
+      <p id="auth-status" class="status-msg"></p>
+
+      <!-- Abas Login / Cadastro -->
+      <div id="auth-forms">
+        <div class="tabs">
+          <button id="tab-login" class="tab active">ENTRAR</button>
+          <button id="tab-register" class="tab">CRIAR CONTA</button>
+        </div>
+
+        <form id="login-form" class="form">
+          <input type="email" id="login-email" placeholder="E-mail" required />
+          <input type="password" id="login-password" placeholder="Senha" required />
+          <button type="submit" class="btn-cyan-lg full">ENTRAR NO COFRE</button>
+        </form>
+
+        <form id="register-form" class="form hidden">
+          <input type="text" id="reg-username" placeholder="Username (ex: Cauan_Runner)" required />
+          <input type="email" id="reg-email" placeholder="E-mail" required />
+          <input type="password" id="reg-password" placeholder="Senha" required />
+          <button type="submit" class="btn-cyan-lg full">CRIAR CONTA (+1500 CR)</button>
+        </form>
+      </div>
+
+      <!-- Perfil quando já está logado -->
+      <div id="profile-view" class="hidden">
+        <div class="summary-box">
+          <p><strong>Jogador:</strong> <span id="prof-username"></span></p>
+          <p><strong>E-mail:</strong> <span id="prof-email"></span></p>
+          <p><strong>Saldo:</strong> <span id="prof-credits" class="green"></span> CR</p>
+        </div>
+        <button id="logout-btn" class="btn-danger full">SAIR DA CONTA</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
