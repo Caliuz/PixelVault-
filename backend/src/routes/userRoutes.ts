@@ -1,21 +1,21 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/UserController';
 import { auth } from '../middlewares/auth';
+import { validate } from '../middlewares/validate';
+import { registerSchema } from '../schemas';
 
 const userRoutes = Router();
 const userController = new UserController();
 
-// Rota pública: cria conta de Cliente ('client') ou Vendedor ('seller')
-userRoutes.post('/users', async (req, res) => {
+userRoutes.post('/users', validate(registerSchema), async (req, res) => {
   await userController.create(req, res);
 });
 
-// Rotas protegidas: exigem token JWT válido
-userRoutes.get('/users', auth, async (req, res) => {
-  await userController.index(req, res);
-});
-
+// Cada usuário só vê o próprio cadastro. A listagem geral foi removida (só voltaria para um admin).
 userRoutes.get('/users/:id', auth, async (req, res) => {
+  if (Number(req.params.id) !== res.locals.userId) {
+    return res.status(403).json({ error: 'Acesso negado.' });
+  }
   await userController.show(req, res);
 });
 

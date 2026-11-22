@@ -2,19 +2,16 @@ import { Router } from 'express';
 import { AuthService } from '../services/AuthService';
 import { UserService } from '../services/UserService';
 import { auth } from '../middlewares/auth';
+import { validate } from '../middlewares/validate';
+import { loginSchema } from '../schemas';
 
 const authRoutes = Router();
 const authService = new AuthService();
 const userService = new UserService();
 
-authRoutes.post('/login', async (req, res) => {
+authRoutes.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
-    }
-
     const result = await authService.login(email, password);
     return res.json(result);
   } catch (error: any) {

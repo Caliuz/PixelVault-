@@ -59,6 +59,14 @@ Marketplace digital de jogos, hardware e passes. Stack: Node.js + Express + Type
 
 - Biblioteca do jogador ("Meus Itens"): `GET /me/library`.
 - Edição de anúncio na tela (a rota `PUT /products/:id` já existe).
-- Revisar `GET /users` e `GET /users/:id`: não exigem login e expõem e-mail e saldo.
-- Validação de e-mail e tamanho mínimo de senha no cadastro.
 - Migração do front-end para Vite + TypeScript.
+
+## Segurança (rodada 2)
+
+- `GET /users` removido; `GET /users/:id` exige login e só mostra o próprio cadastro.
+- Validação com Zod: cadastro (username, e-mail, senha de 8 a 72 caracteres com letra e número, role), login e checkout.
+- Rate limit: login (10 falhas / 15 min por IP), cadastro (10 / hora por IP) e geral (500 / 15 min).
+- `helmet` (cabeçalhos de segurança) e CORS restrito às origens de `CORS_ORIGINS`.
+- Corpo JSON limitado a 10 KB; respostas 404 e 500 em JSON (sem stack trace).
+- JWT verificado só com HS256; o servidor não sobe sem `JWT_SECRET` de pelo menos 32 caracteres.
+- `backend/.env.example` com as variáveis necessárias (sem segredos).

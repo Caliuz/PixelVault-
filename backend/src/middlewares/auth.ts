@@ -11,7 +11,14 @@ export function auth(req: Request, res: Response, next: NextFunction) {
   const token = header.slice(7);
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { id: number };
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string, {
+      algorithms: ['HS256'],
+    }) as { id?: number };
+
+    if (typeof payload.id !== 'number') {
+      return res.status(401).json({ error: 'Token inválido ou expirado.' });
+    }
+
     res.locals.userId = payload.id;
     next();
   } catch {
