@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(100) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   credits INT DEFAULT 1500,
+  role ENUM('client', 'seller') DEFAULT 'client',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -20,7 +21,8 @@ CREATE TABLE IF NOT EXISTS products (
   cr INT NOT NULL,
   brl DECIMAL(10, 2) NOT NULL,
   rating VARCHAR(10) DEFAULT '4.9',
-  img VARCHAR(255) NOT NULL
+  img VARCHAR(255) NOT NULL,
+  seller_id INT NULL
 );
 
 CREATE TABLE IF NOT EXISTS orders (
