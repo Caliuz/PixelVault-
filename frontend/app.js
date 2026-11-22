@@ -4,6 +4,7 @@ let products = [];
 let catalogError = false;
 let currentUser = null;
 let deck = [];
+let ownedIds = new Set(); // IDs de Jogos/Passes que o jogador já possui
 let activeCategory = 'Todos';
 
 // Escapa texto vindo do banco (títulos e nomes criados por vendedores) antes de usar em innerHTML
@@ -66,7 +67,9 @@ function renderProducts() {
     const isMine = currentUser && p.seller_id === currentUser.id;
     const action = isMine
       ? '<span class="muted small">SEU ANÚNCIO</span>'
-      : `<button class="btn-add" onclick="addToDeck(${p.id})">+ DECK</button>`;
+      : (currentUser && ownedIds.has(p.id))
+        ? '<span class="muted small">NA BIBLIOTECA</span>'
+        : `<button class="btn-add" onclick="addToDeck(${p.id})">+ DECK</button>`;
     const seller = p.seller_name ? `<div class="muted small">por ${esc(p.seller_name)}</div>` : '';
 
     return `
@@ -92,6 +95,8 @@ function renderProducts() {
 // DECK (CARRINHO)
 function addToDeck(id) {
   const item = products.find(p => p.id === id);
+  if (item && currentUser && ownedIds.has(item.id)) return;
+  if (item && ['Jogo', 'Passe'].includes(item.category) && deck.some(d => d.id === item.id)) return;
   if (item) {
     deck.push(item);
     updateDeckUI();
@@ -167,6 +172,9 @@ async function carregarBiblioteca() {
     const res = await fetch(`${API_URL}/me/library`, { headers: authHeaders() });
     const rows = await res.json();
     if (!res.ok) throw new Error(rows.error);
+
+    ownedIds = new Set(rows.filter(r => ['Jogo', 'Passe'].includes(r.category)).map(r => r.id));
+    renderProducts();
 
     box.innerHTML = rows.length === 0
       ? '<p class="muted">Você ainda não comprou nada. Explore o catálogo!</p>'
