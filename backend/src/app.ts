@@ -7,6 +7,7 @@ import { orderRoutes } from './routes/orderRoutes';
 import { walletRoutes } from './routes/walletRoutes';
 import { productRoutes } from './routes/productRoutes';
 import { sellerRoutes } from './routes/sellerRoutes';
+import { libraryRoutes } from './routes/libraryRoutes';
 import { globalLimiter, loginLimiter, registerLimiter } from './middlewares/rateLimiters';
 
 const app = express();
@@ -48,6 +49,7 @@ app.use(orderRoutes);
 app.use(walletRoutes);
 app.use(productRoutes);
 app.use(sellerRoutes);
+app.use(libraryRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Rota não encontrada.' });

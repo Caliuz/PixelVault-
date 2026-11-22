@@ -160,6 +160,33 @@ async function carregarHistorico() {
   }
 }
 
+// BIBLIOTECA DO JOGADOR (GET /me/library)
+async function carregarBiblioteca() {
+  const box = document.getElementById('my-library');
+  try {
+    const res = await fetch(`${API_URL}/me/library`, { headers: authHeaders() });
+    const rows = await res.json();
+    if (!res.ok) throw new Error(rows.error);
+
+    box.innerHTML = rows.length === 0
+      ? '<p class="muted">Você ainda não comprou nada. Explore o catálogo!</p>'
+      : rows.map(p => {
+          const data = new Date(p.last_purchase).toLocaleDateString('pt-BR');
+          const qtd = Number(p.quantity) > 1 ? ` · x${Number(p.quantity)}` : '';
+          return `
+            <div class="lib-row">
+              <img class="lib-thumb" src="${esc(p.img)}" alt="${esc(p.title)}">
+              <div>
+                <strong>${esc(p.title)}${qtd}</strong>
+                <div class="muted small">${esc(p.platform)} · comprado em ${data}</div>
+              </div>
+            </div>`;
+        }).join('');
+  } catch {
+    box.innerHTML = '<p class="muted">Não foi possível carregar sua biblioteca.</p>';
+  }
+}
+
 // PAINEL DO VENDEDOR
 async function carregarMeusProdutos() {
   const box = document.getElementById('my-products');
@@ -247,6 +274,7 @@ async function carregarPerfil() {
   updateDeckUI();
   renderProducts();
   carregarHistorico();
+  carregarBiblioteca();
   if (isSeller) carregarMeusProdutos();
 }
 
