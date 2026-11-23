@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoUser {
+  cliente
+  admin
+}
+
+enum CategoriaProduto {
+  computador
+  hardware
+  periferico
+  jogo_digital
+}
+
+enum TipoEntrega {
+  fisico
+  digital
+}
+
+enum StatusPedido {
+  pendente
+  pago
+  enviado
+  entregue
+  cancelado
+}
+
+model Usuario {
+  id           Int      @id @default(autoincrement())
+  nome         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(150)
+  senha_hash   String   @db.VarChar(255)
+  cpf          String?  @unique @db.VarChar(14)
+  tipo         TipoUser @default(cliente)
+  criado_em    DateTime @default(now())
+
+  pedidos      Pedido[]
+  cartoes      Cartao[]
+
+  @@map("usuarios")
+}
+
+model Cartao {
+  id            Int      @id @default(autoincrement())
+  usuario_id    Int
+  nome_titular  String   @db.VarChar(100)
+  ultimos_4     String   @db.Char(4)
+  bandeira      String   @db.VarChar(30)
+  validade      String   @db.VarChar(7)
+  criado_em     DateTime @default(now())
+
+  usuario       Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("cartoes")
+}
+
+model Produto {
+  id           Int              @id @default(autoincrement())
+  nome         String           @db.VarChar(150)
+  descricao    String?          @db.Text
+  preco        Decimal          @db.Decimal(10, 2)
+  categoria    CategoriaProduto
+  tipo_entrega TipoEntrega
+  estoque      Int              @default(0)
+  imagem_url   String?          @db.VarChar(255)
+  criado_em    DateTime         @default(now())
+
+  itens_pedido ItemPedido[]
+
+  @@map("produtos")
+}
+
+model Pedido {
+  id          Int          @id @default(autoincrement())
+  usuario_id  Int
+  valor_total Decimal      @db.Decimal(10, 2)
+  status      StatusPedido @default(pendente)
+  criado_em   DateTime     @default(now())
+
+  usuario     Usuario      @relation(fields: [usuario_id], references: [id])
+  itens       ItemPedido[]
+
+  @@map("pedidos")
+}
+
+model ItemPedido {
+  id             Int     @id @default(autoincrement())
+  pedido_id      Int
+  produto_id     Int
+  quantidade     Int     @default(1)
+  preco_unitario Decimal @db.Decimal(10, 2)
+  chave_ativacao String? @db.VarChar(50)
+
+  pedido         Pedido  @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  produto        Produto @relation(fields: [produto_id], references: [id])
+
+  @@map("itens_pedido")
+}
