@@ -24,6 +24,12 @@ enum TipoEntrega {
   digital
 }
 
+enum FormaPagamento {
+  pix
+  cartao
+  boleto
+}
+
 enum StatusPedido {
   pendente
   pago
@@ -33,32 +39,28 @@ enum StatusPedido {
 }
 
 model Usuario {
-  id           Int      @id @default(autoincrement())
-  nome         String   @db.VarChar(100)
-  email        String   @unique @db.VarChar(150)
-  senha_hash   String   @db.VarChar(255)
-  cpf          String?  @unique @db.VarChar(14)
-  tipo         TipoUser @default(cliente)
-  criado_em    DateTime @default(now())
+  id               Int       @id @default(autoincrement())
+  nome             String    @db.VarChar(100)
+  email            String    @unique @db.VarChar(150)
+  senha_hash       String    @db.VarChar(255)
+  cpf              String    @unique @db.VarChar(14)
+  cep              String    @db.VarChar(9)
+  endereco         String    @db.VarChar(200)
+  numero           String    @db.VarChar(20)
+  bairro           String    @db.VarChar(100)
+  cidade           String    @db.VarChar(100)
+  estado           String    @db.Char(2)
+  tipo             TipoUser  @default(cliente)
+  ativo            Boolean   @default(true)
+  tentativas_login Int       @default(0)
+  bloqueado_ate    DateTime?
+  criado_em        DateTime  @default(now())
 
-  pedidos      Pedido[]
-  cartoes      Cartao[]
+  pedidos          Pedido[]
+  avaliacoes       Avaliacao[]
+  logs             LogSistema[]
 
   @@map("usuarios")
-}
-
-model Cartao {
-  id            Int      @id @default(autoincrement())
-  usuario_id    Int
-  nome_titular  String   @db.VarChar(100)
-  ultimos_4     String   @db.Char(4)
-  bandeira      String   @db.VarChar(30)
-  validade      String   @db.VarChar(7)
-  criado_em     DateTime @default(now())
-
-  usuario       Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-
-  @@map("cartoes")
 }
 
 model Produto {
@@ -73,19 +75,22 @@ model Produto {
   criado_em    DateTime         @default(now())
 
   itens_pedido ItemPedido[]
+  avaliacoes   Avaliacao[]
 
   @@map("produtos")
 }
 
 model Pedido {
-  id          Int          @id @default(autoincrement())
-  usuario_id  Int
-  valor_total Decimal      @db.Decimal(10, 2)
-  status      StatusPedido @default(pendente)
-  criado_em   DateTime     @default(now())
+  id              Int            @id @default(autoincrement())
+  usuario_id      Int
+  valor_total     Decimal        @db.Decimal(10, 2)
+  valor_frete     Decimal        @default(0.00) @db.Decimal(10, 2)
+  forma_pagamento FormaPagamento @default(pix)
+  status          StatusPedido   @default(pendente)
+  criado_em       DateTime       @default(now())
 
-  usuario     Usuario      @relation(fields: [usuario_id], references: [id])
-  itens       ItemPedido[]
+  usuario         Usuario        @relation(fields: [usuario_id], references: [id])
+  itens           ItemPedido[]
 
   @@map("pedidos")
 }
@@ -102,4 +107,32 @@ model ItemPedido {
   produto        Produto @relation(fields: [produto_id], references: [id])
 
   @@map("itens_pedido")
+}
+
+model Avaliacao {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int
+  produto_id Int
+  nota       Int
+  comentario String   @db.Text
+  foto_url   String?  @db.VarChar(255)
+  aprovado   Boolean  @default(false)
+  criado_em  DateTime @default(now())
+
+  usuario    Usuario  @relation(fields: [usuario_id], references: [id])
+  produto    Produto  @relation(fields: [produto_id], references: [id], onDelete: Cascade)
+
+  @@map("avaliacoes")
+}
+
+model LogSistema {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int?
+  acao       String   @db.VarChar(255)
+  ip         String?  @db.VarChar(45)
+  criado_em  DateTime @default(now())
+
+  usuario    Usuario? @relation(fields: [usuario_id], references: [id])
+
+  @@map("logs_sistema")
 }
